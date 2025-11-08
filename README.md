@@ -13,6 +13,7 @@ Firmware binaries for the LZX Industries Videomancer device.
 
 ### Procedure
 
+- Download the desired firmware *.uf2 file from this repository
 - Connect Videomancer's power supply and turn the power switch to the off position
 - Connect USB-C to USB-A cable from Videomancer's USB port to your computer
 - Press and hold down Videomancer's BOOT button
