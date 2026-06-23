@@ -1,0 +1,285 @@
+# LZX Connect — multi-platform release (Linux, macOS, Windows).
+# Hosted on PUBLIC lzxindustries/videomancer-firmware (unlimited GitHub Actions minutes).
+# Source: monorepo software/desktop/connect at Forgejo tag connect/*.
+#
+# Signing secrets mirror lzxindustries/videomancer (APPLE_* from Developer ID .p12).
+# Private videomancer repo CI is retired — org Free plan private-minute quota blocks it.
+
+name: LZX Connect Release
+
+on:
+  push:
+    tags:
+      - 'connect/*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Monorepo tag (e.g. connect/0.3.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: connect-release-${{ github.ref_name || github.event.inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  meta:
+    name: Parse tag
+    runs-on: ubuntu-latest
+    outputs:
+      product: ${{ steps.parse.outputs.product }}
+      version: ${{ steps.parse.outputs.version }}
+      tag: ${{ steps.parse.outputs.tag }}
+      prerelease: ${{ steps.parse.outputs.prerelease }}
+    steps:
+      - name: Parse tag
+        id: parse
+        env:
+          REF_TAG: ${{ github.ref_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          TAG="${REF_TAG:-$INPUT_TAG}"
+          if [[ -z "$TAG" ]]; then
+            echo "No connect/* tag in ref or workflow_dispatch input" >&2
+            exit 1
+          fi
+          PRODUCT="${TAG%%/*}"
+          VERSION="${TAG#*/}"
+          echo "product=$PRODUCT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-rc.* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  connect-build:
+    name: Build (${{ matrix.label }})
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux
+            runner: ubuntu-22.04
+            target: linux
+          - label: macos
+            runner: macos-latest
+            target: macos
+          - label: windows
+            runner: windows-latest
+            target: windows
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout monorepo (Connect + platform)
+        shell: bash
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_RELEASE_TOKEN }}
+          MONOREPO_TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git -c "http.extraHeader=Authorization: Bearer ${FORGEJO_TOKEN}" clone \
+            --depth 1 --filter=blob:none --sparse \
+            https://git.lzxindustries.net/lzx/lzxindustries.git monorepo
+          cd monorepo
+          git -c "http.extraHeader=Authorization: Bearer ${FORGEJO_TOKEN}" fetch \
+            --depth 1 origin "refs/tags/${MONOREPO_TAG}:refs/tags/${MONOREPO_TAG}"
+          git checkout "tags/${MONOREPO_TAG}"
+          git sparse-checkout init --cone
+          git sparse-checkout set software/desktop/connect platform pyproject.toml
+          test -f software/desktop/connect/package.json
+
+      - name: Install system dependencies (Linux)
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libudev-dev \
+            pkg-config
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: monorepo/software/desktop/connect/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache Rust (Connect)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            monorepo/software/desktop/connect/src-tauri/target
+          key: ${{ runner.os }}-connect-release-${{ hashFiles('monorepo/software/desktop/connect/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-connect-release-
+
+      - name: Install monorepo + codegen
+        working-directory: monorepo
+        run: |
+          pip install -e .
+          python platform/workflows/connect_products_codegen.py
+          python platform/workflows/fetch_dfu_util_binaries.py
+
+      - name: Sync version from tag
+        working-directory: monorepo/software/desktop/connect
+        shell: bash
+        run: bash scripts/sync_version.sh
+
+      - name: Install frontend dependencies
+        working-directory: monorepo/software/desktop/connect
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: monorepo/software/desktop/connect
+        run: npx tsc --noEmit
+
+      - name: Clean stale bundle outputs
+        shell: bash
+        run: |
+          rm -rf monorepo/software/desktop/connect/src-tauri/target/release/bundle
+          rm -rf monorepo/software/desktop/connect/src-tauri/target/universal-apple-darwin/release/bundle
+          rm -rf monorepo/software/desktop/connect/src-tauri/target/aarch64-apple-darwin/release/bundle
+          rm -rf monorepo/software/desktop/connect/src-tauri/target/x86_64-apple-darwin/release/bundle
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: monorepo/software/desktop/connect
+          args: ${{ matrix.target == 'macos' && '--target universal-apple-darwin' || '' }}
+          tagName: ''
+          releaseName: ''
+
+      - name: Upload Linux artifacts
+        if: matrix.target == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: connect-release-linux
+          path: |
+            monorepo/software/desktop/connect/src-tauri/target/release/bundle/deb/*.deb
+            monorepo/software/desktop/connect/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+      - name: Upload macOS artifacts
+        if: matrix.target == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: connect-release-macos
+          path: |
+            monorepo/software/desktop/connect/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+
+      - name: Upload Windows artifacts
+        if: matrix.target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: connect-release-windows
+          path: |
+            monorepo/software/desktop/connect/src-tauri/target/release/bundle/msi/*.msi
+            monorepo/software/desktop/connect/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+  connect-publish:
+    name: Publish to videomancer-firmware
+    needs: [meta, connect-build]
+    if: needs.connect-build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          pattern: connect-release-*
+          merge-multiple: true
+
+      - name: Flatten artifacts + checksums
+        working-directory: release-artifacts
+        run: |
+          find . -type f \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.msi' -o -name '*.exe' \) -exec mv -n {} . \;
+          find . -type d -empty -delete
+          sha256sum *.deb *.AppImage *.dmg *.msi *.exe 2>/dev/null > checksums.sha256 || true
+          ls -lh
+
+      - name: Checkout monorepo (publish tooling)
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_RELEASE_TOKEN }}
+          MONOREPO_TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          git -c "http.extraHeader=Authorization: Bearer ${FORGEJO_TOKEN}" clone \
+            --depth 1 --filter=blob:none --sparse \
+            https://git.lzxindustries.net/lzx/lzxindustries.git monorepo
+          cd monorepo
+          git fetch --depth 1 origin "refs/tags/${MONOREPO_TAG}:refs/tags/${MONOREPO_TAG}"
+          git checkout "tags/${MONOREPO_TAG}"
+          git sparse-checkout init --cone
+          git sparse-checkout set platform config data pyproject.toml
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install publish tooling
+        working-directory: monorepo
+        run: pip install -e .
+
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<EOF
+          ## LZX Connect ${{ needs.meta.outputs.version }}
+
+          Multi-platform desktop release built from monorepo \`software/desktop/connect\`.
+
+          ### Supported devices
+          - Videomancer (UF2)
+          - Scrolls, Diver, Escher Sketch (STM32 DFU)
+          - Chromagnon (coming soon)
+
+          ### Artifacts
+          - Windows: MSI + NSIS setup
+          - macOS: universal DMG (Apple Silicon + Intel)
+          - Linux: .deb + AppImage
+          EOF
+
+      - name: Publish release (Forgejo + GitHub shadow)
+        working-directory: monorepo
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASES_TOKEN }}
+          FORGEJO_RELEASE_TOKEN: ${{ secrets.FORGEJO_RELEASE_TOKEN }}
+          FORGEJO_ADMIN_TOKEN: ${{ secrets.FORGEJO_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.meta.outputs.version }}"
+          PRERELEASE="${{ needs.meta.outputs.prerelease }}"
+          ARGS=(firmware-publish --product connect --version "$VERSION" --create-release --notes-file ../release-notes.md)
+          if [ "$PRERELEASE" = "true" ]; then ARGS+=(--prerelease); fi
+          for f in ../release-artifacts/*; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.deb|*.AppImage|*.dmg|*.msi|*.exe|*.sha256) ARGS+=(--artifact "$f") ;;
+            esac
+          done
+          python platform/registry/lzx.py "${ARGS[@]}"
