@@ -41,9 +41,12 @@ jobs:
           REF_TAG: ${{ github.ref_name }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          TAG="${REF_TAG:-$INPUT_TAG}"
+          TAG="${INPUT_TAG}"
           if [[ -z "$TAG" ]]; then
-            echo "No connect/* tag in ref or workflow_dispatch input" >&2
+            TAG="${REF_TAG}"
+          fi
+          if [[ "$TAG" != connect/* ]]; then
+            echo "Expected connect/* tag; got '${TAG}' (ref=${REF_TAG} input=${INPUT_TAG})" >&2
             exit 1
           fi
           PRODUCT="${TAG%%/*}"
