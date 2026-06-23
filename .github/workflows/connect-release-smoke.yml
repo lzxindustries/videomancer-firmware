@@ -1,0 +1,13 @@
+name: Connect release smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "GitHub Actions OK on videomancer-firmware (public)"
