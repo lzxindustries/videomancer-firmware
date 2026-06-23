@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Monorepo tag (e.g. connect/0.3.0)'
+        description: 'Monorepo tag (e.g. connect/1.0.2-rc.5)'
         required: true
         type: string
 
