@@ -164,6 +164,27 @@ jobs:
           rm -rf monorepo/software/desktop/connect/src-tauri/target/aarch64-apple-darwin/release/bundle
           rm -rf monorepo/software/desktop/connect/src-tauri/target/x86_64-apple-darwin/release/bundle
 
+      - name: Pre-build universal lzx-connect-cli (macOS)
+        if: matrix.target == 'macos'
+        working-directory: monorepo/software/desktop/connect/src-tauri
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin --bin lzx-connect-cli --features headless
+          cargo build --release --target x86_64-apple-darwin --bin lzx-connect-cli --features headless
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create -output target/universal-apple-darwin/release/lzx-connect-cli \
+            target/aarch64-apple-darwin/release/lzx-connect-cli \
+            target/x86_64-apple-darwin/release/lzx-connect-cli
+          codesign --force --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            target/universal-apple-darwin/release/lzx-connect-cli
+          for b in resources/dfu-util/dfu-util resources/dfu-util/libusb-1.0.0.dylib resources/dfu-util/libusb-1.0.dylib; do
+            [ -f "$b" ] && codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$b"
+          done
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
