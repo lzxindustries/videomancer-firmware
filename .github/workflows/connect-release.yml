@@ -139,7 +139,7 @@ jobs:
       - name: Install monorepo + codegen
         working-directory: monorepo
         run: |
-          pip install -e .
+          pip install -e ".[ops]"
           python platform/workflows/connect_products_codegen.py
           python platform/workflows/fetch_dfu_util_binaries.py
 
@@ -252,7 +252,7 @@ jobs:
 
       - name: Install publish tooling
         working-directory: monorepo
-        run: pip install -e .
+        run: pip install -e ".[ops]"
 
       - name: Write release notes
         run: |
