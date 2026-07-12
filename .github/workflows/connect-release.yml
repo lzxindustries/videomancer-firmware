@@ -297,17 +297,15 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: Serial Console attach freeze.
+          Bugfix release: Serial Console and device detection freeze.
 
-          ### Fixed in 1.3.1
-          - **Serial Console** — fixed mutex deadlock that froze the app when clicking Connect
-          - Safer attach/detach lifecycle (stale session recovery, rollback on partial failure)
-          - Console UI remains usable when the device list is briefly empty while connected
+          ### Fixed in 1.3.2
+          - **Device detection** — fixed mutex deadlock in `with_port` that froze the app when a Videomancer was plugged in (regression from 1.3.1)
+          - **Serial Console** — attach no longer deadlocks; safer session lifecycle retained from 1.3.1
 
-          ### Includes 1.3.0
-          - **Serial Console** tab — bidirectional shell terminal for Videomancer CDC devices
-          - Live log of all LZX Connect serial traffic (firmware, VMPROG, program library, settings)
-          - Port selector, command history, timestamps toggle, auto-scroll
+          ### Includes 1.3.0–1.3.1
+          - Serial Console tab with live traffic tee, port selector, command history
+          - Console attach/detach rollback and stale-session recovery
 
           ### Supported devices
           - Videomancer (UF2 + serial console)
