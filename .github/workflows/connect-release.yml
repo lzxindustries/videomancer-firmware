@@ -294,15 +294,21 @@ jobs:
 
       - name: Write release notes
         run: |
-          cat > release-notes.md <<EOF
+          cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Multi-platform desktop release built from monorepo \`software/desktop/connect\`.
+          Feature release: Videomancer USB Serial Console.
+
+          ### New in 1.3.0
+          - **Serial Console** tab — bidirectional shell terminal for Videomancer CDC devices
+          - Live log of all LZX Connect serial traffic (firmware reboot/verify, VMPROG, program library, settings)
+          - Port selector for multi-device setups; console disabled when no Videomancer is detected
+          - Command history, timestamps toggle, auto-scroll, and binary-upload summaries
 
           ### Supported devices
-          - Videomancer (UF2)
+          - Videomancer (UF2 + serial console)
           - Scrolls, Diver, Escher Sketch (STM32 DFU)
-          - Chromagnon (coming soon)
+          - TBC2 Mk2 (autodownload)
 
           ### Artifacts
           - Windows: MSI + NSIS setup
@@ -320,7 +326,8 @@ jobs:
           set -euo pipefail
           VERSION="${{ needs.meta.outputs.version }}"
           PRERELEASE="${{ needs.meta.outputs.prerelease }}"
-          ARGS=(firmware-publish --product connect --version "$VERSION" --create-release --notes-file ../release-notes.md)
+          NOTES="$(cat ../release-notes.md)"
+          ARGS=(firmware-publish --product connect --version "$VERSION" --create-release --notes "$NOTES")
           if [ "$PRERELEASE" = "true" ]; then ARGS+=(--prerelease); fi
           for f in ../release-artifacts/*; do
             [ -f "$f" ] || continue
