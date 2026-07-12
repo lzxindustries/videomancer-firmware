@@ -297,13 +297,17 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Feature release: Videomancer USB Serial Console.
+          Bugfix release: Serial Console attach freeze.
 
-          ### New in 1.3.0
+          ### Fixed in 1.3.1
+          - **Serial Console** — fixed mutex deadlock that froze the app when clicking Connect
+          - Safer attach/detach lifecycle (stale session recovery, rollback on partial failure)
+          - Console UI remains usable when the device list is briefly empty while connected
+
+          ### Includes 1.3.0
           - **Serial Console** tab — bidirectional shell terminal for Videomancer CDC devices
-          - Live log of all LZX Connect serial traffic (firmware reboot/verify, VMPROG, program library, settings)
-          - Port selector for multi-device setups; console disabled when no Videomancer is detected
-          - Command history, timestamps toggle, auto-scroll, and binary-upload summaries
+          - Live log of all LZX Connect serial traffic (firmware, VMPROG, program library, settings)
+          - Port selector, command history, timestamps toggle, auto-scroll
 
           ### Supported devices
           - Videomancer (UF2 + serial console)
