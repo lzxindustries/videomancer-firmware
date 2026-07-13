@@ -297,15 +297,15 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: Serial Console and device detection freeze.
+          Bugfix release: program library release detection after Forgejo CDN cutover.
 
-          ### Fixed in 1.3.2
-          - **Device detection** — fixed mutex deadlock in `with_port` that froze the app when a Videomancer was plugged in (regression from 1.3.1)
-          - **Serial Console** — attach no longer deadlocks; safer session lifecycle retained from 1.3.1
+          ### Fixed in 1.3.3
+          - **Official program library** — Connect no longer sticks on an empty Forgejo release list; falls through to GitHub when needed
+          - **Community program library** — remaps `lzx` / `lzxindustries` to public Forgejo `lars/` + GitHub `lzxindustries/` (was querying non-existent `github.com/lzx/...`)
 
-          ### Includes 1.3.0–1.3.1
+          ### Includes 1.3.0–1.3.2
           - Serial Console tab with live traffic tee, port selector, command history
-          - Console attach/detach rollback and stale-session recovery
+          - Device detection / Serial Console mutex deadlock fixes
 
           ### Supported devices
           - Videomancer (UF2 + serial console)
