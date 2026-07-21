@@ -297,18 +297,20 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: program library release detection after Forgejo CDN cutover.
+          Bugfix release: Windows console spam, UF2 flash reliability, Serial Console removal.
 
-          ### Fixed in 1.3.3
-          - **Official program library** — Connect no longer sticks on an empty Forgejo release list; falls through to GitHub when needed
-          - **Community program library** — remaps `lzx` / `lzxindustries` to public Forgejo `lars/` + GitHub `lzxindustries/` (was querying non-existent `github.com/lzx/...`)
+          ### Fixed in 1.3.4
+          - **Windows** — Stopped polling removable drives via `wmic` (console window spam / `WMIC.exe` `0xc0000142`); uses Win32 APIs instead
+          - **Firmware flash** — Flush UF2 with `File::sync_all` (no PowerShell), fail when the update drive never unmounts or the version is unchanged after reconnect
+          - **Program libraries** — Clearer SD mount errors (power-cycle with card seated; `programs/` + Developer Mode for manual copies)
+          - **Removed** — Serial Console tab (deprecated)
 
-          ### Includes 1.3.0–1.3.2
-          - Serial Console tab with live traffic tee, port selector, command history
-          - Device detection / Serial Console mutex deadlock fixes
+          ### Includes 1.3.0–1.3.3
+          - Program library release detection after Forgejo CDN cutover
+          - Device detection / serial hub mutex deadlock fixes
 
           ### Supported devices
-          - Videomancer (UF2 + serial console)
+          - Videomancer (UF2)
           - Scrolls, Diver, Escher Sketch (STM32 DFU)
           - TBC2 Mk2 (autodownload)
 
