@@ -297,17 +297,15 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: Windows console spam, UF2 flash reliability, Serial Console removal.
+          Bugfix release: program library upload reliability and firmware version display.
 
-          ### Fixed in 1.3.4
-          - **Windows** — Stopped polling removable drives via `wmic` (console window spam / `WMIC.exe` `0xc0000142`); uses Win32 APIs instead
-          - **Firmware flash** — Flush UF2 with `File::sync_all` (no PowerShell), fail when the update drive never unmounts or the version is unchanged after reconnect
-          - **Program libraries** — Clearer SD mount errors (power-cycle with card seated; `programs/` + Developer Mode for manual copies)
-          - **Removed** — Serial Console tab (deprecated)
+          ### Fixed in 1.3.5
+          - **Program library upload** — Classify USB disconnect (broken pipe) with actionable errors; skip Windows recovery when device reset mid-transfer
+          - **Firmware version display** — Do not cache stale RC when device is faulted; clear version when flash starts
+          - **Embedded catalog** — Diver 1.0.2 final; remove dead fallback URLs for CDN-only legacy DFU artifacts
 
-          ### Includes 1.3.0–1.3.3
-          - Program library release detection after Forgejo CDN cutover
-          - Device detection / serial hub mutex deadlock fixes
+          ### Requires Videomancer firmware
+          Program library uploads also need **Videomancer 1.0.0-rc.40** (watchdog feeding during SD writes).
 
           ### Supported devices
           - Videomancer (UF2)
@@ -323,7 +321,9 @@ jobs:
       - name: Publish release (Forgejo + GitHub shadow)
         working-directory: monorepo
         env:
-          GH_TOKEN: ${{ secrets.PUBLIC_RELEASES_TOKEN }}
+          # Use GITHUB_TOKEN for shadow publish (contents: write). PUBLIC_RELEASES_TOKEN
+          # lacks release create on this repo and caused 403 shadow publish failures.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORGEJO_RELEASE_TOKEN: ${{ secrets.FORGEJO_RELEASE_TOKEN }}
           FORGEJO_ADMIN_TOKEN: ${{ secrets.FORGEJO_ADMIN_TOKEN }}
         run: |
