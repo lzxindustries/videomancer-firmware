@@ -318,12 +318,9 @@ jobs:
           - Linux: .deb + AppImage
           EOF
 
-      - name: Publish release (Forgejo + GitHub shadow)
+      - name: Publish release (Forgejo)
         working-directory: monorepo
         env:
-          # Use GITHUB_TOKEN for shadow publish (contents: write). PUBLIC_RELEASES_TOKEN
-          # lacks release create on this repo and caused 403 shadow publish failures.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORGEJO_RELEASE_TOKEN: ${{ secrets.FORGEJO_RELEASE_TOKEN }}
           FORGEJO_ADMIN_TOKEN: ${{ secrets.FORGEJO_ADMIN_TOKEN }}
         run: |
@@ -340,3 +337,21 @@ jobs:
             esac
           done
           python platform/registry/lzx.py "${ARGS[@]}"
+
+      - name: Publish GitHub shadow (gh CLI)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.meta.outputs.tag }}"
+          REPO="lzxindustries/videomancer-firmware"
+          PRERE="${{ needs.meta.outputs.prerelease }}"
+          mapfile -t FILES < <(find release-artifacts -maxdepth 1 -type f \( \
+            -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o \
+            -name '*.msi' -o -name '*.exe' -o -name 'checksums.sha256' \))
+          test "${#FILES[@]}" -ge 1
+          gh release delete "$TAG" --repo "$REPO" --yes 2>/dev/null || true
+          GH_ARGS=(release create "$TAG" "${FILES[@]}" --repo "$REPO" --title "$TAG" --notes-file release-notes.md)
+          if [ "$PRERE" = "true" ]; then GH_ARGS+=(--prerelease); fi
+          gh "${GH_ARGS[@]}"
+          echo "GitHub shadow: https://github.com/${REPO}/releases/tag/${TAG}"
