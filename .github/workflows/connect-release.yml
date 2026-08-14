@@ -297,20 +297,21 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: program library upload reliability and firmware version display.
+          Bugfix release: Windows program library install reliability and USB storage mode recovery.
 
-          ### Fixed in 1.3.5
-          - **Program library upload** — Classify USB disconnect (broken pipe) with actionable errors; skip Windows recovery when device reset mid-transfer
-          - **Firmware version display** — Do not cache stale RC when device is faulted; clear version when flash starts
-          - **Embedded catalog** — Diver 1.0.2 final; remove dead fallback URLs for CDN-only legacy DFU artifacts
+          ### Fixed in 1.3.7
+          - **Program library install (Windows)** — Pre-create all zip directory paths (official and community authors) before uploading files, so fresh SD cards no longer require manual folder creation via USB storage mode
+          - **Serial I/O retry** — Recover from transient Windows CDC errors (os error 22) during intensive fs stat/mkdir round-trips, not only during file uploads
+          - **USB storage mode exit** — Poll until the SD card is remounted before allowing program installs; refresh device and library state in the UI after exiting MSD
+          - **Error messages** — Distinguish serial I/O failures, SD not mounted, and layout conflicts instead of misleading write-protection hints
 
           ### Requires Videomancer firmware
-          Program library uploads also need **Videomancer 1.0.0-rc.40** (watchdog feeding during SD writes).
+          Program library uploads need **Videomancer 1.0.0-rc.40** or later (watchdog feeding during SD writes). Retry after a USB disconnect if the device reboots mid-transfer.
 
           ### Supported devices
           - Videomancer (UF2)
           - Scrolls, Diver, Escher Sketch (STM32 DFU)
-          - TBC2 Mk2 (autodownload)
+          - TBC2 Mk2, Memory Palace (USB mass storage)
 
           ### Artifacts
           - Windows: MSI + NSIS setup
