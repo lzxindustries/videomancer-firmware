@@ -297,19 +297,16 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: Windows program library install reliability and USB storage mode recovery.
+          Interface release: the Firmware page groups each update method under a heading that names the devices it covers.
 
-          ### Fixed in 1.3.7
-          - **Program library install (Windows)** — Pre-create all zip directory paths (official and community authors) before uploading files, so fresh SD cards no longer require manual folder creation via USB storage mode
-          - **Serial I/O retry** — Recover from transient Windows CDC errors (os error 22) during intensive fs stat/mkdir round-trips, not only during file uploads
-          - **USB storage mode exit** — Poll until the SD card is remounted before allowing program installs; refresh device and library state in the UI after exiting MSD
-          - **Error messages** — Distinguish serial I/O failures, SD not mounted, and layout conflicts instead of misleading write-protection hints
-
-          ### Requires Videomancer firmware
-          Program library uploads need **Videomancer 1.0.0-rc.40** or later (watchdog feeding during SD writes). Retry after a USB disconnect if the device reboots mid-transfer.
+          ### Changed in 1.3.11
+          - **Section headings** — Update Videomancer & Chromagnon, Update Scrolls, Diver & Escher Sketch, and Update TBC2 & Memory Palace, all at one heading size with a divider between sections
+          - **Module picker and status badges** — The Scrolls / Diver / Escher Sketch module picker and the DFU and USB-storage badges now match the rest of the app in light and dark themes
+          - **USB Storage Mode button** — Shows a pressed state while storage mode is on
+          - **Windows driver guide** — The Zadig link opens in your browser and stays readable in dark mode
 
           ### Supported devices
-          - Videomancer (UF2)
+          - Videomancer, Chromagnon (UF2)
           - Scrolls, Diver, Escher Sketch (STM32 DFU)
           - TBC2 Mk2, Memory Palace (USB mass storage)
 
