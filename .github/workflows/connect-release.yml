@@ -297,16 +297,14 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: program library installs retry each file instead of failing the whole install on one SD write error, the macOS app icon is back, and error messages can be copied.
+          Bugfix release: Upload Program resends a program automatically when Videomancer's FPGA does not configure on the first try.
 
-          ### Fixed in 1.3.12
-          - **Program library install** — Each file's `fs put` is attempted up to three times, with a short pause and a serial input purge between attempts, so a single serial error (such as the Windows "semaphore timeout", os error 121) or one slow SD write no longer aborts the whole install
-          - **macOS app icon** — The Dock and Finder icon is back. The icon file shipped since 1.3.8 used invalid entry types that newer macOS versions refuse to decode, which left a white square
-          - **Copy error messages** — Every error and warning notice has a clipboard button that copies its text, ready to paste into a support thread
-          - **Connect log** — A file that needed a retry is recorded with its attempt count
+          ### Fixed in 1.3.13
+          - **Upload Program** — When Videomancer reports that the FPGA did not configure (code 738197512), Connect sends the file again, up to three transfers in all. Each resend configures the FPGA at a slower SPI clock, so large programs that failed with "program stream load failed" now load. The status line reads "FPGA didn't configure — resending at a slower speed…" while it retries
+          - **Connect log** — Each resend is recorded with its attempt number
 
           ### Requires Videomancer firmware
-          The retry relies on **Videomancer 1.0.1** or later, which discards the rest of an aborted `fs put` stream so the shell stays in sync. **Videomancer 1.0.2-rc.2** is recommended: it drains uploads at line rate and lets the program scan yield to host transfers, which removes the slow-install timeouts reported on 1.0.2-rc.1.
+          The automatic resend needs **Videomancer 1.0.2-rc.3** or later, which reports the configuration failure and steps the SPI clock down on the next stream. With older firmware Upload Program behaves as in 1.3.12. Program library installs still need **Videomancer 1.0.1** or later; **1.0.2-rc.3** is recommended.
 
           ### Supported devices
           - Videomancer, Chromagnon (UF2)
