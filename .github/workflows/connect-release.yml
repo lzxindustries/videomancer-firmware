@@ -297,10 +297,11 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## LZX Connect ${{ needs.meta.outputs.version }}
 
-          Bugfix release: Upload Program resends a program automatically when Videomancer's FPGA does not configure on the first try.
+          Bugfix release: Upload Program resends a program automatically when Videomancer's FPGA does not configure on the first try, and the program library panel shows manual microSD install steps.
 
           ### Fixed in 1.3.13
           - **Upload Program** — When Videomancer reports that the FPGA did not configure (code 738197512), Connect sends the file again, up to three transfers in all. Each resend configures the FPGA at a slower SPI clock, so large programs that failed with "program stream load failed" now load. The status line reads "FPGA didn't configure — resending at a slower speed…" while it retries
+          - **Program library manual install** — The program library panel links to the official and community release pages and lists the microSD copy steps. When an automatic install fails, or the SD card is not mounted, the error notice shows the same links and steps
           - **Connect log** — Each resend is recorded with its attempt number
 
           ### Requires Videomancer firmware
