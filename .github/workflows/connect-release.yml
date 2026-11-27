@@ -91,8 +91,10 @@ jobs:
           cd monorepo
           git -c "http.extraHeader=Authorization: Bearer ${FORGEJO_TOKEN}" fetch \
             --depth 1 origin "refs/tags/${MONOREPO_TAG}:refs/tags/${MONOREPO_TAG}"
-          git checkout "tags/${MONOREPO_TAG}"
+          # Auth before checkout: a blobless clone fetches the tag's files here, lazily, and main
+          # may have moved past the tag since the clone (the connect/1.3.16 publish failed so).
           git config --local http.extraHeader "Authorization: Bearer ${FORGEJO_TOKEN}"
+          git checkout "tags/${MONOREPO_TAG}"
           git sparse-checkout init --no-cone
           git sparse-checkout set software/desktop/connect platform config pyproject.toml software/web/storefront/app/data/generated
           test -f software/desktop/connect/package.json
@@ -279,8 +281,10 @@ jobs:
           cd monorepo
           git -c "http.extraHeader=Authorization: Bearer ${FORGEJO_TOKEN}" fetch \
             --depth 1 origin "refs/tags/${MONOREPO_TAG}:refs/tags/${MONOREPO_TAG}"
-          git checkout "tags/${MONOREPO_TAG}"
+          # Auth before checkout: a blobless clone fetches the tag's files here, lazily, and main
+          # may have moved past the tag since the clone (the connect/1.3.16 publish failed so).
           git config --local http.extraHeader "Authorization: Bearer ${FORGEJO_TOKEN}"
+          git checkout "tags/${MONOREPO_TAG}"
           git sparse-checkout init --no-cone
           git sparse-checkout set platform config data pyproject.toml
 
